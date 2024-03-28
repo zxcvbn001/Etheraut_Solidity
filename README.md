@@ -81,9 +81,9 @@ You will beat this level if
 
 ```
 contract Attack{
-    Fallback public fb; // Bank合约地址
+    Fallback public fb; // Fallback合约地址
 
-    // 初始化Bank合约地址
+    // 初始化Fallback合约地址
     constructor(Fallback _fb) payable {
         fb = _fb;
     }
@@ -134,3 +134,65 @@ contract Attack{
 
 # Fallout
 
+## 漏洞代码
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.0;
+//import 'openzeppelin-contracts-06/math/SafeMath.sol';
+//这里修改了一下，上面的导入方式remix貌似不识别
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.0.0/contracts/math/SafeMath.sol";
+
+contract Fallout {
+  
+  using SafeMath for uint256;
+  mapping (address => uint) allocations;
+  address payable public owner;
+
+
+  /* constructor */
+  function Fal1out() public payable {
+    owner = msg.sender;
+    allocations[owner] = msg.value;
+  }
+
+  modifier onlyOwner {
+	        require(
+	            msg.sender == owner,
+	            "caller is not the owner"
+	        );
+	        _;
+	    }
+
+  function allocate() public payable {
+    allocations[msg.sender] = allocations[msg.sender].add(msg.value);
+  }
+
+  function sendAllocation(address payable allocator) public {
+    require(allocations[allocator] > 0);
+    allocator.transfer(allocations[allocator]);
+  }
+
+  function collectAllocations() public onlyOwner {
+    msg.sender.transfer(address(this).balance);
+  }
+
+  function allocatorBalance(address allocator) public view returns (uint) {
+    return allocations[allocator];
+  }
+}
+```
+
+![image-20240328103103592](README.assets/image-20240328103103592.png)
+
+## 分析&攻击
+
+目标和fallback一样 获取所有权
+
+合约名是Fallout  但是构造函数时Fal1out 写错了，因此可以直接调用Fal1out
+
+因此随便换个人执行下fal1out就能改变owner
+
+![image-20240328104722351](README.assets/image-20240328104722351.png)
+
+# Coin Flip
