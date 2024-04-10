@@ -276,7 +276,9 @@ contract Attack {
 
 （1）我们用anvil启动一个本地链，5s生成一个新区块（据说 Remix 自带的 Remix VM不支持 `blockhash`函数，我没试，我直接本地测比较保险，因为remix vm还有其他bug）：
 
+```
 anvil --block-time 5
+```
 
 ![image-20240410152613519](README.assets/image-20240410152613519.png)
 
