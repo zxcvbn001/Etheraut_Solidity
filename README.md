@@ -373,3 +373,66 @@ contract Attack {
 ![image-20240410160052121](README.assets/image-20240410160052121.png)
 
 ![image-20240410160040713](README.assets/image-20240410160040713.png)
+
+
+
+
+
+# Token
+
+## 漏洞代码
+
+```
+题目要求：此级别的目标是让您破解下面的基本代币合约。
+一开始你会得到 20 个代币，如果你能设法获得任何额外的代币，你就能通关。 最好是非常大量的代币。
+```
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.0;
+
+contract Token {
+    mapping(address => uint256) balances;
+    uint256 public totalSupply;
+
+    constructor(uint256 _initialSupply) public {
+        balances[msg.sender] = totalSupply = _initialSupply;
+    }
+
+    function transfer(address _to, uint256 _value) public returns (bool) {
+        require(balances[msg.sender] - _value >= 0);
+        balances[msg.sender] -= _value;
+        balances[_to] += _value;
+        return true;
+    }
+
+    function balanceOf(address _owner) public view returns (uint256 balance) {
+        return balances[_owner];
+    }
+}
+```
+
+## 分析&攻击
+
+这个合约一开始创建的时候会让你指定一个初始的代币值，根据提示是要获取额外的代币，能改余额的也就transfer()函数了，
+
+看到uint256做运算，很容易想到整数溢出，因为uint没有负数，require怎么都会满足
+
+solidity 0.8.0 版本之后会自动检查整型溢出错误，所以用0.6.0测试的
+
+这里用20代币初始部署测试一下：
+
+![image-20240410162141921](README.assets/image-20240410162141921.png)
+
+这里我们随便找个地址转账0x709...，金额大于20就行
+
+![image-20240410162343772](README.assets/image-20240410162343772.png)
+
+然后看看我们账户的余额，已经是非常大了：
+
+![image-20240410162429139](README.assets/image-20240410162429139.png)
+
+
+
+
+
