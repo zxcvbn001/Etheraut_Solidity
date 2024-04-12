@@ -492,11 +492,9 @@ contract Delegation {
 
 Delegate合约倒简单，直接换个用户调用pwn()就改掉了owner
 
-关键是Delegation合约，
+关键是Delegation合约，在fallback函数中我们发现有个(bool result,) = address(delegate).delegatecall(msg.data);
 
-(bool result,) = address(delegate).delegatecall(msg.data);
-
-因为再Fallback函数中，且msg.data是我们可控的字段，这样就能让他delegatecall我们想要的函数，怎么实现更改owner呢？
+因为fallback可以触发，且msg.data是我们可控的字段，那这样就能让他delegatecall我们想要的函数，怎么实现更改owner呢？
 
 这里就要提到delegatecall和call的区别：
 
@@ -513,38 +511,6 @@ Delegation合约就相当于B
 因此攻击合约就需要转账给Delegation ，触发fallback，同时msg.data为pwn()函数的编码，触发delegatecall，就能达到效果
 
 ```
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract Delegate {
-    address public owner;
-
-    constructor(address _owner) {
-        owner = _owner;
-    }
-
-    function pwn() public {
-        owner = msg.sender;
-    }
-}
-
-contract Delegation {
-    address public owner;
-    Delegate delegate;
-
-    constructor(address _delegateAddress) {
-        delegate = Delegate(_delegateAddress);
-        owner = msg.sender;
-    }
-
-    fallback() external {
-        (bool result,) = address(delegate).delegatecall(msg.data);
-        if (result) {
-            this;
-        }
-    }
-}
-
 contract Attack {
     // Delegation 合约地址
     Delegation public delegationContract;
