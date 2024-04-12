@@ -1,18 +1,11 @@
 - [Fallback](#fallback)
-  - [漏洞代码](#漏洞代码)
-  - [分析\&攻击](#分析攻击)
 - [Fallout](#fallout)
-  - [漏洞代码](#漏洞代码-1)
-  - [分析\&攻击](#分析攻击-1)
 - [Coin Flip](#coin-flip)
-  - [漏洞代码](#漏洞代码-2)
-  - [分析\&攻击](#分析攻击-2)
 - [Telephone](#telephone)
-  - [漏洞代码](#漏洞代码-3)
-  - [分析\&攻击](#分析攻击-3)
 - [Token](#token)
-  - [漏洞代码](#漏洞代码-4)
-  - [分析\&攻击](#分析攻击-4)
+- [Delegation](#delegation)
+- [Force](#force)
+- [Vault](#vault)
 
 # Fallback
 
@@ -615,3 +608,32 @@ contract Attack {
 然后attack
 
 ![image-20240412163616108](README.assets/image-20240412163616108.png)
+
+# Vault
+
+```
+题目要求：解锁金库以通过关卡！
+看起来应该是要把locked变量改成false
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Vault {
+    bool public locked;
+    bytes32 private password;
+
+    constructor(bytes32 _password) {
+        locked = true;
+        password = _password;
+    }
+
+    function unlock(bytes32 _password) public {
+        if (password == _password) {
+            locked = false;
+        }
+    }
+}
+```
+
+看起来是public，但是不能直接改
+
+![image-20240412165729176](README.assets/image-20240412165729176.png)
