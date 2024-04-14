@@ -652,7 +652,7 @@ address是合约地址，position是索引位置（从0开始）
 web3.eth.getStorageAt(instance,1)
 ```
 
-![image-20240414224205203](D:\Etheraut_Solidity\README.assets\image-20240414224205203.png)
+![image-20240414224205203](README.assets/image-20240414224205203.png)
 
 这里看到是bytes32的，还得借助web3.utils.toAscii转换成string
 
@@ -660,7 +660,7 @@ web3.eth.getStorageAt(instance,1)
 console.info(web3.utils.toAscii("0x412076657279207374726f6e67207365637265742070617373776f7264203a29"))
 ```
 
-![image-20240414224438999](D:\Etheraut_Solidity\README.assets\image-20240414224438999.png)
+![image-20240414224438999](README.assets/image-20240414224438999.png)
 
 
 
@@ -670,9 +670,9 @@ console.info(web3.utils.toAscii("0x412076657279207374726f6e672073656372657420706
 contract.unlock(await web3.eth.getStorageAt(contract.address, 1))
 ```
 
-![image-20240414224615466](D:\Etheraut_Solidity\README.assets\image-20240414224615466.png)
+![image-20240414224615466](README.assets/image-20240414224615466.png)
 
-![image-20240414224903600](D:\Etheraut_Solidity\README.assets\image-20240414224903600.png)
+![image-20240414224903600](README.assets/image-20240414224903600.png)
 
 # King
 
@@ -739,21 +739,21 @@ contract Attack {
 
 首先我们部署King合约，初始的prize设置成1 wei
 
-![image-20240414232031063](D:\Etheraut_Solidity\README.assets\image-20240414232031063.png)
+![image-20240414232031063](README.assets/image-20240414232031063.png)
 
-![image-20240414232117164](D:\Etheraut_Solidity\README.assets\image-20240414232117164.png)
+![image-20240414232117164](README.assets/image-20240414232117164.png)
 
 king和owner目前都是0x5B...
 
 然后部署攻击合约
 
-![image-20240414232144642](D:\Etheraut_Solidity\README.assets\image-20240414232144642.png)
+![image-20240414232144642](README.assets/image-20240414232144642.png)
 
 用一个比prize大的数，先满足条件，修改king为攻击合约
 
-![image-20240414232208080](D:\Etheraut_Solidity\README.assets\image-20240414232208080.png)
+![image-20240414232208080](README.assets/image-20240414232208080.png)
 
-![image-20240414232321757](D:\Etheraut_Solidity\README.assets\image-20240414232321757.png)
+![image-20240414232321757](README.assets/image-20240414232321757.png)
 
 这样别人再转多的钱 也无法成为king了
 
