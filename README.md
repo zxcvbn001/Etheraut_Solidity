@@ -6,6 +6,7 @@
 - [Delegation](#delegation)
 - [Force](#force)
 - [Vault](#vault)
+- [King](#king)
 
 # Fallback
 
