@@ -634,8 +634,40 @@ contract Vault {
 }
 ```
 
-看起来是public，但是不能直接改
+看起来是public，但是不能通过其他合约直接改，毕竟是private的变量
 
 ![image-20240412165729176](README.assets/image-20240412165729176.png)
 
-sss
+搜索别人的解法都是借助web3.js直接读取链上的信息
+
+命令行格式为：
+
+```
+web3.eth.getStorageAt(address, position [, defaultBlock] [, callback])
+```
+
+address是合约地址，position是索引位置（从0开始）
+
+```
+web3.eth.getStorageAt(instance,1)
+```
+
+![image-20240414224205203](D:\Etheraut_Solidity\README.assets\image-20240414224205203.png)
+
+这里看到是bytes32的，还得借助web3.utils.toAscii转换成string
+
+```
+console.info(web3.utils.toAscii("0x412076657279207374726f6e67207365637265742070617373776f7264203a29"))
+```
+
+![image-20240414224438999](D:\Etheraut_Solidity\README.assets\image-20240414224438999.png)
+
+
+
+这就是密码了，然后用这个密码解锁，最后我们查看这个已经是解锁状态
+
+```
+contract.unlock(await web3.eth.getStorageAt(contract.address, 1))
+```
+
+![image-20240414224615466](D:\Etheraut_Solidity\README.assets\image-20240414224615466.png)
