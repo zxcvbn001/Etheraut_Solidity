@@ -7,6 +7,8 @@
 - [Force](#force)
 - [Vault](#vault)
 - [King](#king)
+- [Reentrance](#reentrance)
+
 
 # Fallback
 
@@ -851,6 +853,37 @@ contract Attack {
 且攻击合约余额为很大值，这里估计是整数溢出了，不过这里查看余额是全部都过来了，我演示截图多存了一些，正常来说是6 wei
 
 ![image-20240415092512314](README.assets/image-20240415092512314.png)
+
+# Elevator
+
+```
+题目要求：
+This elevator won't let you reach the top of your building. Right?
+该电梯不会让您到达建筑物的顶部。对吗？
+```
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface Building {
+    function isLastFloor(uint256) external returns (bool);
+}
+
+contract Elevator {
+    bool public top;
+    uint256 public floor;
+
+    function goTo(uint256 _floor) public {
+        Building building = Building(msg.sender);
+
+        if (!building.isLastFloor(_floor)) {
+            floor = _floor;
+            top = building.isLastFloor(floor);
+        }
+    }
+}
+```
 
 
 
