@@ -649,7 +649,7 @@ contract Vault {
 web3.eth.getStorageAt(address, position [, defaultBlock] [, callback])
 ```
 
-address是合约地址，position是索引位置（从0开始）
+address是合约地址，position是索引位置
 
 ```
 web3.eth.getStorageAt(instance,1)
@@ -854,36 +854,97 @@ contract Attack {
 
 ![image-20240415092512314](README.assets/image-20240415092512314.png)
 
-# Elevator
+# Privacy
 
 ```
-题目要求：
-This elevator won't let you reach the top of your building. Right?
-该电梯不会让您到达建筑物的顶部。对吗？
+The creator of this contract was careful enough to protect the sensitive areas of its storage.
+
+Unlock this contract to beat the level.
+
+Things that might help:
+
+Understanding how storage works
+Understanding how parameter parsing works
+Understanding how casting works
+
+该合约的创建者非常小心地保护其存储的敏感区域。
+
+解锁此合同以通关。
+
+可能有帮助的事情：
+
+了解存储的工作原理
+了解参数解析的工作原理
+了解铸造的工作原理
 ```
 
 ```
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface Building {
-    function isLastFloor(uint256) external returns (bool);
-}
+contract Privacy {
+    bool public locked = true;
+    uint256 public ID = block.timestamp;
+    uint8 private flattening = 10;
+    uint8 private denomination = 255;
+    uint16 private awkwardness = uint16(block.timestamp);
+    bytes32[3] private data;
 
-contract Elevator {
-    bool public top;
-    uint256 public floor;
-
-    function goTo(uint256 _floor) public {
-        Building building = Building(msg.sender);
-
-        if (!building.isLastFloor(_floor)) {
-            floor = _floor;
-            top = building.isLastFloor(floor);
-        }
+    constructor(bytes32[3] memory _data) {
+        data = _data;
     }
+
+    function unlock(bytes16 _key) public {
+        require(_key == bytes16(data[2]));
+        locked = false;
+    }
+
+    /*
+    A bunch of super advanced solidity algorithms...
+
+      ,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`
+      .,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,
+      *.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^         ,---/V\
+      `*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.    ~|__(o.o)
+      ^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'^`*.,*'  UU  UU
+    */
 }
 ```
 
+初始化data，如果输入的key和data能对上就解锁
 
+跟Vault差不多咯，读取链上的信息，但是这里的索引没这么简单，因为要的是data[2]，就得看合约的存储布局了
+
+https://learnblockchain.cn/books/geth/part7/storage.html
+
+![image-20240418165822180](README.assets/image-20240418165822180.png)
+
+![image-20240418165945475](README.assets/image-20240418165945475.png)
+
+```
+	bool public locked = true;
+    uint256 public ID = block.timestamp; 
+    uint8 private flattening = 10;
+    uint8 private denomination = 255;
+    uint16 private awkwardness = uint16(block.timestamp);
+    bytes32[3] private data; 
+```
+
+这样算起来，locked一个槽 ID需要 32 字节占用 1 个插槽 uint三个变量一个槽 bytes32[3]是接下来三个槽
+
+所以需要的data[2]就在第6个插槽，索引从0开始，所以是:
+
+```
+web3.eth.getStorageAt(contract.address, 5)
+```
+
+![image-20240418163458891](README.assets/image-20240418163458891.png)
+
+
+
+看代码还需要将data[2]从bytes32转换成bytes16，截取一半
+
+```
+contract.unlock((await web3.eth.getStorageAt(contract.address, 5)).slice(0,32))
+```
 
