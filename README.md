@@ -944,7 +944,16 @@ web3.eth.getStorageAt(contract.address, 5)
 
 看代码还需要将data[2]从bytes32转换成bytes16，截取一半
 
+为什么是 34 而不是 32？
+bytes32 类型的值需要 64 个十六进制字符来表示。而 bytes16 类型的值只需要 32 个十六进制字符。因此，如果您只想获取 bytes32 值的前 16 个字节，您需要截取前 32 个字符。
+然而，这里需要注意的是，web3.eth.getStorageAt 返回的字符串是以 "0x" 开头的，这两个字符也需要被计算在内。 因此，为了获取前 32 个十六进制字符，您需要将结束位置设置为 34，即 slice(0,34)
+
 ```
-contract.unlock((await web3.eth.getStorageAt(contract.address, 5)).slice(0,32))
+contract.unlock((await web3.eth.getStorageAt(contract.address, 5)).slice(0,34))
 ```
 
+顺手看看locked变量的值 web3.eth.getStorageAt(contract.address, 0) 是0证明是false
+
+![image-20240418191452956](README.assets/image-20240418191452956.png)
+
+![image-20240418191533628](README.assets/image-20240418191533628.png)
